@@ -157,7 +157,7 @@ const settings = reactive({
 	fromDate: "2009-01",
 	toDate: dateToday,
 	getIntersection: false,
-	checkAllDates: false
+	checkAllDates: true
 });
 
 const select = ref("Select a country or draw a polygon");
