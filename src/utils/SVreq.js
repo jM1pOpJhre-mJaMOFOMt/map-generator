@@ -26,7 +26,7 @@ export default function SVreq(loc, settings) {
 								pano: res.time[i].pano,
 								lat: result.location.latLng.lat(),
 								lng: result.location.latLng.lng(),
-								heading: settings.adjustHeading && res.links.length > 0 ? parseInt(result.links[0].heading) + randomInRange(-settings.headingDeviation, settings.headingDeviation) : 0,
+								heading: settings.adjustHeading && result.links.length > 0 ? parseInt(result.links[0].heading) + randomInRange(-settings.headingDeviation, settings.headingDeviation) : 0,
 								pitch: settings.adjustPitch ? settings.pitchDeviation : 0
 							}
 						);
