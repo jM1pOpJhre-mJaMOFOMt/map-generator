@@ -24,11 +24,11 @@
 			</div>
 		</div>
 		<Button
-			@click="clearMarkers"
-			class="bg-warning"
-			text="Clear markers"
-			optText="(for performance, this won't erase your generated locations)"
-			title="Clear markers"
+		@click="clearMarkers"
+		class="bg-warning"
+		text="Clear markers"
+		optText="(for performance, this won't erase your generated locations)"
+		title="Clear markers"
 		/>
 	</div>
 
@@ -40,10 +40,8 @@
 
 			<div v-if="settings.rejectUnofficial">
 				<Checkbox v-model:checked="settings.rejectNoDescription" label="Reject locations without description" />
-				<small
-					>This might prevent trekkers in most cases, but can reject regular streetview without description. (eg. Mongolia/South Korea panoramas mostly don't
-					have description)</small
-				>
+				<small>This might prevent trekkers in most cases, but can reject regular streetview without description. (eg. Mongolia/South Korea panoramas mostly don't
+				have description)</small>
 				<hr />
 				<Checkbox v-model:checked="settings.getIntersection" label="Prefer intersections" />
 				<hr />
@@ -99,11 +97,11 @@
 		</div>
 
 		<Button
-			v-if="canBeStarted"
-			@click="handleClickStart"
-			:class="state.started ? 'bg-danger' : 'bg-success'"
-			:text="state.started ? 'Pause' : 'Start'"
-			title="Space bar/Enter"
+		v-if="canBeStarted"
+		@click="handleClickStart"
+		:class="state.started ? 'bg-danger' : 'bg-success'"
+		:text="state.started ? 'Pause' : 'Start'"
+		title="Space bar/Enter"
 		/>
 	</div>
 
@@ -168,6 +166,7 @@ const canBeStarted = computed(() => selected.value.some((country) => country.fou
 const hasResults = computed(() => selected.value.some((country) => country.found.length > 0));
 
 let map;
+var allFound=[];
 const customPolygonsLayer = new L.FeatureGroup();
 const markerLayer = L.layerGroup();
 const geojson = L.geoJson(borders, {
@@ -286,6 +285,8 @@ Array.prototype.chunk = function (n) {
 	return [this.slice(0, n)].concat(this.slice(n).chunk(n));
 };
 
+const SV = new google.maps.StreetViewService();
+
 const generate = async (country) => {
 	return new Promise(async (resolve) => {
 		while (country.found.length < country.nbNeeded) {
@@ -301,18 +302,24 @@ const generate = async (country) => {
 			for (let locationGroup of randomCoords.chunk(100)) {
 				const responses = await Promise.allSettled(locationGroup.map((l) => SVreq(l, settings)));
 				for (let res of responses) {
-					if (res.status === "fulfilled" && country.found.length < country.nbNeeded) {
-						country.found.push(res.value);
-						L.marker([res.value.lat, res.value.lng], { icon: myIcon })
-							.on("click", () => {
-								window.open(
-									`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${res.value.lat},${res.value.lng}
-									${res.value.heading ? "&heading=" + res.value.heading : ""}
-									${res.value.pitch ? "&pitch=" + res.value.pitch : ""}`,
-									"_blank"
-								);
-							})
-							.addTo(markerLayer);
+					if (res.status === "fulfilled") {
+						for (let location of res.value) {
+							if (allFound.some(l => l.pano == location.pano)) continue; // prevent duplicates
+							if (country.found.length < country.nbNeeded) {
+								country.found.push(location);
+								allFound.push(location);
+								L.marker([location.lat, location.lng], { icon: myIcon })
+								.on("click", () => {
+									window.open(
+										`https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.pano}
+										${location.heading ? "&heading=" + location.heading : ""}
+										${location.pitch ? "&pitch=" + location.pitch : ""}`,
+										"_blank"
+									);
+								})
+								.addTo(markerLayer);
+							}
+						}
 					}
 				}
 			}
