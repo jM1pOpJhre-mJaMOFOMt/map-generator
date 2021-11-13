@@ -132,6 +132,10 @@ import "@/assets/leaflet-draw/leaflet.draw.js";
 import "@/assets/leaflet-draw/leaflet.draw.css";
 import marker from "@/assets/images/marker-icon.png";
 
+import "leaflet.markercluster/dist/leaflet.markercluster.js";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 
 import SVreq from "@/utils/SVreq";
@@ -168,7 +172,10 @@ const hasResults = computed(() => selected.value.some((country) => country.found
 let map;
 var allFound=[];
 const customPolygonsLayer = new L.FeatureGroup();
-const markerLayer = L.layerGroup();
+const markerLayer = L.markerClusterGroup({
+	maxClusterRadius: 100,
+	disableClusteringAtZoom: 12
+});
 const geojson = L.geoJson(borders, {
 	style: style,
 	onEachFeature: onEachFeature,
@@ -287,13 +294,46 @@ Array.prototype.chunk = function (n) {
 
 const SV = new google.maps.StreetViewService();
 
+top.all=function(){return allFound;};
+top.allCSV=function(){
+	let csv = "";
+	let nbLocs = 0;
+	allFound.forEach((loc) => {
+		csv += loc.lat + "," + loc.lng + ",\n";
+		nbLocs++;
+	});
+	const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+	const fileName = `Generated map (${nbLocs} location${nbLocs > 1 ? "s" : ""}).csv`;
+	const linkElement = document.createElement("a");
+	linkElement.href = dataUri;
+	linkElement.download = fileName;
+	linkElement.click();
+};
+
+top.allJSON = () => {
+	const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allFound));
+	const fileName = `Generated map (${allFound.length} location${allFound.length > 1 ? "s" : ""}).json`;
+	const linkElement = document.createElement("a");
+	linkElement.href = dataUri;
+	linkElement.download = fileName;
+	linkElement.click();
+};
+
+top.importJSON = (list) => {
+	for (let location of list) {
+		if (!location.pano || !location.lat || !location.lng) continue;
+		if (allFound.some(l => l.pano == location.pano)) continue; // prevent duplicates
+		allFound.push(location);
+	}
+};
+
 const generate = async (country) => {
 	return new Promise(async (resolve) => {
 		while (country.found.length < country.nbNeeded) {
 			if (!state.started) return;
 			country.isProcessing = true;
 			const randomCoords = [];
-			while (randomCoords.length < country.nbNeeded) {
+			while (randomCoords.length < Math.min(country.nbNeeded,400)) {
 				const point = randomPointInPoly(country);
 				if (booleanPointInPolygon([point.lng, point.lat], country.feature)) {
 					randomCoords.push(point);
