@@ -27,7 +27,8 @@ export default function SVreq(loc, settings) {
 								lat: result.location.latLng.lat(),
 								lng: result.location.latLng.lng(),
 								heading: settings.adjustHeading && result.links.length > 0 ? parseInt(result.links[0].heading) + randomInRange(-settings.headingDeviation, settings.headingDeviation) : 0,
-								pitch: settings.adjustPitch ? settings.pitchDeviation : 0
+								pitch: settings.adjustPitch ? settings.pitchDeviation : 0,
+								imageDate: result.imageDate
 							}
 						);
 						//TODO: add settings.onlyOneLoc
@@ -45,7 +46,8 @@ export default function SVreq(loc, settings) {
 						lat: res.location.latLng.lat(),
 						lng: res.location.latLng.lng(),
 						heading: settings.adjustHeading && res.links.length > 0 ? parseInt(res.links[0].heading) + randomInRange(-settings.headingDeviation, settings.headingDeviation) : 0,
-						pitch: settings.adjustPitch ? settings.pitchDeviation : 0
+						pitch: settings.adjustPitch ? settings.pitchDeviation : 0,
+						imageDate: res.imageDate
 					}
 				);
 			}
