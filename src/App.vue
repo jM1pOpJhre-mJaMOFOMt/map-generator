@@ -94,6 +94,9 @@
 			<small>
 				This will check the dates of nearby coverage (the dates shown when you click the time machine/clock icon). This is helpful for finding coverage within a specific timeframe.
 			</small>
+			<hr />
+
+			<Checkbox v-model:checked="settings.checkLinks" label="Check linked panos" />
 		</div>
 
 		<Button
@@ -138,7 +141,6 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 
-import SVreq from "@/utils/SVreq";
 import borders from "@/utils/borders.json";
 
 const state = reactive({
@@ -161,7 +163,8 @@ const settings = reactive({
 	fromDate: "2009-01",
 	toDate: dateToday,
 	getIntersection: false,
-	checkAllDates: true
+	checkAllDates: true,
+	checkLinks: true
 });
 
 const select = ref("Select a country or draw a polygon");
@@ -170,11 +173,11 @@ const canBeStarted = computed(() => selected.value.some((country) => country.fou
 const hasResults = computed(() => selected.value.some((country) => country.found.length > 0));
 
 let map;
-var allFound=[];
+let allFound=[];
 const customPolygonsLayer = new L.FeatureGroup();
 const markerLayer = L.markerClusterGroup({
 	maxClusterRadius: 100,
-	disableClusteringAtZoom: 12
+	disableClusteringAtZoom: 15
 });
 const geojson = L.geoJson(borders, {
 	style: style,
@@ -204,6 +207,7 @@ onMounted(() => {
 	map = L.map("map", {
 		attributionControl: false,
 		center: [0, 0],
+		preferCanvas: true,
 		zoom: 2,
 		zoomControl: false,
 		worldCopyJump: true,
@@ -220,7 +224,7 @@ onMounted(() => {
 		const polygon = e.layer;
 		polygon.feature = e.layer.toGeoJSON();
 		polygon.found = [];
-		polygon.nbNeeded = 100;
+		polygon.nbNeeded = 100000;
 		polygon.feature.properties.name = `Custom polygon ${state.polygonID}`;
 		polygon.setStyle(customPolygonStyle());
 		polygon.setStyle(highlighted());
@@ -333,41 +337,157 @@ const generate = async (country) => {
 			if (!state.started) return;
 			country.isProcessing = true;
 			const randomCoords = [];
-			while (randomCoords.length < Math.min(country.nbNeeded,400)) {
+			while (randomCoords.length < Math.min(country.nbNeeded,50)) {
 				const point = randomPointInPoly(country);
 				if (booleanPointInPolygon([point.lng, point.lat], country.feature)) {
 					randomCoords.push(point);
 				}
 			}
 			for (let locationGroup of randomCoords.chunk(100)) {
-				const responses = await Promise.allSettled(locationGroup.map((l) => SVreq(l, settings)));
-				for (let res of responses) {
-					if (res.status === "fulfilled") {
-						for (let location of res.value) {
-							if (allFound.some(l => l.pano == location.pano)) continue; // prevent duplicates
-							if (country.found.length < country.nbNeeded) {
-								country.found.push(location);
-								allFound.push(location);
-								L.marker([location.lat, location.lng], { icon: myIcon })
-								.on("click", () => {
-									window.open(
-										`https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.pano}
-										${location.heading ? "&heading=" + location.heading : ""}
-										${location.pitch ? "&pitch=" + location.pitch : ""}`,
-										"_blank"
-									);
-								})
-								.addTo(markerLayer);
-							}
-						}
-					}
-				}
+				await Promise.allSettled(locationGroup.map((l) => SVreq(l, country)));
 			}
 		}
 		resolve();
 		country.isProcessing = false;
 	});
 };
+
+const checkedPanos = new Set();
+
+function SVreq(loc, country) {
+	return new Promise(async (resolve, reject) => {
+		await getLoc(loc, country, resolve, reject);
+	});
+}
+
+async function getLoc(loc, country, resolve, reject) {
+	SV.getPanoramaByLocation(new google.maps.LatLng(loc.lat, loc.lng), settings.radius, async (res, status) => {
+			let locations = [];
+			if (status != google.maps.StreetViewStatus.OK) return reject();
+			if (settings.checkLinks) {
+				for (let loc of res.links) {
+					getPano(loc.pano, country);
+				}
+			}
+			if (settings.checkAllDates) {
+				if (!res.time || !res.time.length) return reject();
+				let fromDate = Date.parse(settings.fromDate);
+				let toDate = Date.parse(settings.toDate);
+				let dateWithin = false;
+				for (let loc of res.time) {
+					if (settings.rejectUnofficial && loc.pano.length != 22) continue; // Checks if pano ID is 22 characters long. Otherwise, it's an Ari
+					let iDate = Date.parse(loc.jm.getFullYear() + "-" + (loc.jm.getMonth() > 8 ? "" : "0") + (loc.jm.getMonth() + 1)); // this will parse the Date object from res.time[i] (like Fri Oct 01 2021 00:00:00 GMT-0700 (Pacific Daylight Time)) to a local timestamp, like Date.parse("2021-09") == 1630454400000 for Pacific Daylight Time
+					if (iDate >= fromDate && iDate <= toDate) { // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
+						dateWithin = true;
+						getPano(loc.pano, country);
+						//TODO: add settings.onlyOneLoc
+						//if(settings.onlyOneLoc)break;
+					}
+				}
+				if (!dateWithin) return reject();
+			}
+			else {
+				if (Date.parse(res.imageDate) < Date.parse(settings.fromDate) || Date.parse(res.imageDate) > Date.parse(settings.toDate)) return reject();
+				if (settings.rejectDateless && !res.imageDate) return reject();
+				addLoc(res, country);
+			}
+
+			resolve(locations);
+		}).catch((e) => reject(e.message));
+}
+
+function isPanoGood(pano) {
+	if (settings.rejectUnofficial) {
+		if (pano.location.pano.length != 22) return false;
+		if (!/^\xA9 (?:\d+ )?Google$/.test(pano.copyright)) return false;
+		if (settings.rejectNoDescription && !pano.location.description && !pano.location.shortDescription) return false;
+		if (settings.getIntersection && pano.links.length < 3) return false;
+	}
+
+	if (settings.rejectDateless && !pano.imageDate) return false;
+	if (!pano.time || !pano.time.length) return false;
+	let fromDate = Date.parse(settings.fromDate);
+	let toDate = Date.parse(settings.toDate);
+	let locDate = Date.parse(pano.imageDate);
+	if (locDate < fromDate || locDate > toDate) return false;
+
+
+	return true;
+}
+
+top.gp = function(id) {
+	return getPano(id, null);
+}
+
+function getPano(id, country) {
+	return getPanoDeep(id, country, 0);
+}
+
+function getPanoDeep(id, country, depth) {
+	//console.log(id, depth);
+	if (depth > 5) return;
+	if (checkedPanos.has(id)) return;
+	else checkedPanos.add(id);
+	SV.getPanorama({"pano":id}, async (pano, status) => {
+		if (status == google.maps.StreetViewStatus.UNKNOWN_ERROR) {
+			checkedPanos.delete(id);
+			getPanoDeep(id, country, depth);
+		}
+		else if (status != google.maps.StreetViewStatus.OK) return;
+		if(settings.checkAllDates) {
+			let fromDate = Date.parse(settings.fromDate);
+			let toDate = Date.parse(settings.toDate);
+			for (let loc of pano.time) {
+				if (settings.rejectUnofficial && loc.pano.length != 22) continue; // Checks if pano ID is 22 characters long. Otherwise, it's an Ari
+				let iDate = Date.parse(loc.jm.getFullYear() + "-" + (loc.jm.getMonth() > 8 ? "" : "0") + (loc.jm.getMonth() + 1)); // this will parse the Date object from res.time[i] (like Fri Oct 01 2021 00:00:00 GMT-0700 (Pacific Daylight Time)) to a local timestamp, like Date.parse("2021-09") == 1630454400000 for Pacific Daylight Time
+				if (iDate >= fromDate && iDate <= toDate) { // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
+					getPano(loc.pano, country);
+					//TODO: add settings.onlyOneLoc
+					//if(settings.onlyOneLoc)break;
+				}
+			}
+		}
+		if (settings.checkLinks) {
+			for (let loc of pano.links) {
+				getPanoDeep(loc.pano, country, isPanoGood(pano)?0:depth+1);
+			}
+		}
+		if (isPanoGood(pano)) addLoc(pano, country);
+		return pano;
+	});
+}
+
+
+function addLoc(pano, country) {
+	if (allFound.some(l => l.pano == pano.location.pano)) return; // prevent duplicates
+
+	let location = {
+		pano: pano.location.pano,
+		lat: pano.location.latLng.lat(),
+		lng: pano.location.latLng.lng(),
+		heading: settings.adjustHeading && pano.links.length > 0 ? parseInt(pano.links[0].heading) + randomInRange(-settings.headingDeviation, settings.headingDeviation) : 0,
+		pitch: settings.adjustPitch ? settings.pitchDeviation : 0,
+		imageDate: pano.imageDate
+	};
+
+	if (!country || country.found.length < country.nbNeeded) {
+		if (country) country.found.push(location);
+		allFound.push(location);
+		L.marker([location.lat, location.lng], { icon: myIcon })
+		.on("click", () => {
+			window.open(
+				`https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.pano}
+				${location.heading ? "&heading=" + location.heading : ""}
+				${location.pitch ? "&pitch=" + location.pitch : ""}`,
+				"_blank"
+			);
+		})
+		.addTo(markerLayer);
+	}
+
+}
+
+const randomInRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 const randomPointInPoly = (polygon) => {
 	const bounds = polygon.getBounds();
