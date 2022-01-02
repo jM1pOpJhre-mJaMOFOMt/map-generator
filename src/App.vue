@@ -369,7 +369,7 @@
 					getPano(loc.pano, country);
 				}
 			}
-			if (settings.checkAllDates) {
+			if (settings.checkAllDates && res.time) {
 				if (!res.time || !res.time.length) return reject();
 				let fromDate = Date.parse(settings.fromDate);
 				let toDate = Date.parse(settings.toDate);
