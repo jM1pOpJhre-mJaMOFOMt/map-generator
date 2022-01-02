@@ -153,7 +153,7 @@
 	const settings = reactive({
 		radius: 500,
 		rejectUnofficial: true,
-		rejectNoDescription: true,
+		rejectNoDescription: false,
 		rejectDateless: true,
 		adjustHeading: true,
 		headingDeviation: 0,
@@ -364,13 +364,13 @@
 		SV.getPanoramaByLocation(new google.maps.LatLng(loc.lat, loc.lng), settings.radius, async (res, status) => {
 			let locations = [];
 			if (status != google.maps.StreetViewStatus.OK) return reject();
-			if (settings.checkLinks) {
+			if (settings.checkLinks && res.links) {
 				for (let loc of res.links) {
 					getPano(loc.pano, country);
 				}
 			}
 			if (settings.checkAllDates && res.time) {
-				if (!res.time || !res.time.length) return reject();
+				if (!res.time.length) return reject();
 				let fromDate = Date.parse(settings.fromDate);
 				let toDate = Date.parse(settings.toDate);
 				let dateWithin = false;
@@ -405,7 +405,7 @@
 		}
 
 		if (settings.rejectDateless && !pano.imageDate) return false;
-		if (!pano.time || !pano.time.length) return false;
+		//if (!pano.time || !pano.time.length) return false;
 		let fromDate = Date.parse(settings.fromDate);
 		let toDate = Date.parse(settings.toDate);
 		let locDate = Date.parse(pano.imageDate);
@@ -434,7 +434,7 @@
 				getPanoDeep(id, country, depth);
 			}
 			else if (status != google.maps.StreetViewStatus.OK) return;
-			if(settings.checkAllDates) {
+			if(settings.checkAllDates && pano.time) {
 				let fromDate = Date.parse(settings.fromDate);
 				let toDate = Date.parse(settings.toDate);
 				for (let loc of pano.time) {
@@ -447,7 +447,7 @@
 					}
 				}
 			}
-			if (settings.checkLinks) {
+			if (settings.checkLinks && pano.links) {
 				for (let loc of pano.links) {
 					getPanoDeep(loc.pano, country, isPanoGood(pano)?0:depth+1);
 				}
