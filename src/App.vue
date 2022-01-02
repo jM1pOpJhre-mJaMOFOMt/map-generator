@@ -148,7 +148,7 @@
 		polygonID: 0,
 	});
 
-	const dateToday = new Date().getFullYear() + "-" + (new Date().getMonth() + 1);
+	const dateToday = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, '0');
 
 	const settings = reactive({
 		radius: 500,
