@@ -431,7 +431,7 @@
 		SV.getPanorama({"pano":id}, async (pano, status) => {
 			if (status == google.maps.StreetViewStatus.UNKNOWN_ERROR) {
 				checkedPanos.delete(id);
-				getPanoDeep(id, country, depth);
+				return getPanoDeep(id, country, depth);
 			}
 			else if (status != google.maps.StreetViewStatus.OK) return;
 			if(settings.checkAllDates && pano.time) {
