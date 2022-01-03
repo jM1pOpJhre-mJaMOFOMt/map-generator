@@ -224,7 +224,7 @@
 			const polygon = e.layer;
 			polygon.feature = e.layer.toGeoJSON();
 			polygon.found = [];
-			polygon.nbNeeded = 100000;
+			polygon.nbNeeded = 1000000;
 			polygon.feature.properties.name = `Custom polygon ${state.polygonID}`;
 			polygon.setStyle(customPolygonStyle());
 			polygon.setStyle(highlighted());
@@ -389,7 +389,7 @@
 			else {
 				if (Date.parse(res.imageDate) < Date.parse(settings.fromDate) || Date.parse(res.imageDate) > Date.parse(settings.toDate)) return reject();
 				if (settings.rejectDateless && !res.imageDate) return reject();
-				addLoc(res, country);
+				getPano(res.location.pano, country);
 			}
 
 			resolve(locations);
@@ -434,6 +434,7 @@
 				return getPanoDeep(id, country, depth);
 			}
 			else if (status != google.maps.StreetViewStatus.OK) return;
+			if(!pano)console.log(status, pano);
 			if(settings.checkAllDates && pano.time) {
 				let fromDate = Date.parse(settings.fromDate);
 				let toDate = Date.parse(settings.toDate);
@@ -448,8 +449,15 @@
 				}
 			}
 			if (settings.checkLinks && pano.links) {
-				for (let loc of pano.links) {
-					getPanoDeep(loc.pano, country, isPanoGood(pano)?0:depth+1);
+				if (pano.links) {
+					for (let loc of pano.links) {
+						getPanoDeep(loc.pano, country, isPanoGood(pano)?0:depth+1);
+					}
+				}
+				if (pano.time) {
+					for (let loc of pano.time) {
+						getPanoDeep(loc.pano, country, isPanoGood(pano)?0:depth+1);
+					}
 				}
 			}
 			if (isPanoGood(pano)) addLoc(pano, country);
