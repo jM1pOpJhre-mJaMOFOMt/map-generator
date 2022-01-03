@@ -131,8 +131,9 @@
 
 	import L from "leaflet";
 	import "leaflet/dist/leaflet.css";
-	import "@/assets/leaflet-draw/leaflet.draw.js";
-	import "@/assets/leaflet-draw/leaflet.draw.css";
+	import "leaflet-draw/dist/leaflet.draw.js";
+	import "leaflet-draw/dist/leaflet.draw.css";
+	window.type = !0;
 	import marker from "@/assets/images/marker-icon.png";
 
 	import "leaflet.markercluster/dist/leaflet.markercluster.js";
@@ -417,6 +418,10 @@
 
 	top.gp = function(id) {
 		return getPano(id, null);
+	}
+
+	top.goto = function(lat, lng) {
+		map.setView(new L.LatLng(lat, lng), 13);
 	}
 
 	function getPano(id, country) {
