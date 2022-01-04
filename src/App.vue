@@ -448,7 +448,7 @@
 					}
 				}
 			}
-			if (settings.checkLinks && pano.links) {
+			if (settings.checkLinks) {
 				if (pano.links) {
 					for (let loc of pano.links) {
 						getPanoDeep(loc.pano, country, isPanoGood(pano)?0:depth+1);
