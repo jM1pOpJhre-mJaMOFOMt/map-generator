@@ -338,7 +338,7 @@
 				if (!state.started) return;
 				country.isProcessing = true;
 				const randomCoords = [];
-				while (randomCoords.length < Math.min(country.nbNeeded,50)) {
+				while (randomCoords.length < Math.min(country.nbNeeded,5000)) {
 					const point = randomPointInPoly(country);
 					if (booleanPointInPolygon([point.lng, point.lat], country.feature)) {
 						randomCoords.push(point);
@@ -365,11 +365,6 @@
 		SV.getPanoramaByLocation(new google.maps.LatLng(loc.lat, loc.lng), settings.radius, async (res, status) => {
 			let locations = [];
 			if (status != google.maps.StreetViewStatus.OK) return reject();
-			if (settings.checkLinks && res.links) {
-				for (let loc of res.links) {
-					getPano(loc.pano, country);
-				}
-			}
 			if (settings.checkAllDates && res.time) {
 				if (!res.time.length) return reject();
 				let fromDate = Date.parse(settings.fromDate);
