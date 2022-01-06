@@ -451,12 +451,12 @@
 			if (settings.checkLinks) {
 				if (pano.links) {
 					for (let loc of pano.links) {
-						getPanoDeep(loc.pano, country, isPanoGood(pano)?0:depth+1);
+						getPanoDeep(loc.pano, country, isPanoGood(pano)?1:depth+1);
 					}
 				}
 				if (pano.time) {
 					for (let loc of pano.time) {
-						getPanoDeep(loc.pano, country, isPanoGood(pano)?0:depth+1);
+						getPanoDeep(loc.pano, country, isPanoGood(pano)?1:depth+1);
 					}
 				}
 			}
@@ -478,9 +478,10 @@
 			imageDate: pano.imageDate
 		};
 
+		allFound.push(location);
+
 		if (!country || country.found.length < country.nbNeeded) {
 			if (country) country.found.push(location);
-			allFound.push(location);
 			L.marker([location.lat, location.lng], { icon: myIcon })
 			.on("click", () => {
 				window.open(
