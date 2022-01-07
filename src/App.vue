@@ -372,7 +372,8 @@
 				let dateWithin = false;
 				for (let loc of res.time) {
 					if (settings.rejectUnofficial && loc.pano.length != 22) continue; // Checks if pano ID is 22 characters long. Otherwise, it's an Ari
-					let iDate = Date.parse(loc.jm.getFullYear() + "-" + (loc.jm.getMonth() > 8 ? "" : "0") + (loc.jm.getMonth() + 1)); // this will parse the Date object from res.time[i] (like Fri Oct 01 2021 00:00:00 GMT-0700 (Pacific Daylight Time)) to a local timestamp, like Date.parse("2021-09") == 1630454400000 for Pacific Daylight Time
+					let date = Object.values(loc).find((val) => val instanceof Date);
+					let iDate = Date.parse(date.getFullYear() + "-" + (date.getMonth() > 8 ? "" : "0") + (date.getMonth() + 1)); // this will parse the Date object from res.time[i] (like Fri Oct 01 2021 00:00:00 GMT-0700 (Pacific Daylight Time)) to a local timestamp, like Date.parse("2021-09") == 1630454400000 for Pacific Daylight Time
 					if (iDate >= fromDate && iDate <= toDate) { // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
 						dateWithin = true;
 						getPano(loc.pano, country);
@@ -440,7 +441,8 @@
 				let toDate = Date.parse(settings.toDate);
 				for (let loc of pano.time) {
 					if (settings.rejectUnofficial && loc.pano.length != 22) continue; // Checks if pano ID is 22 characters long. Otherwise, it's an Ari
-					let iDate = Date.parse(loc.jm.getFullYear() + "-" + (loc.jm.getMonth() > 8 ? "" : "0") + (loc.jm.getMonth() + 1)); // this will parse the Date object from res.time[i] (like Fri Oct 01 2021 00:00:00 GMT-0700 (Pacific Daylight Time)) to a local timestamp, like Date.parse("2021-09") == 1630454400000 for Pacific Daylight Time
+					let date = Object.values(loc).find((val) => val instanceof Date);
+					let iDate = Date.parse(date.getFullYear() + "-" + (date.getMonth() > 8 ? "" : "0") + (date.getMonth() + 1)); // this will parse the Date object from res.time[i] (like Fri Oct 01 2021 00:00:00 GMT-0700 (Pacific Daylight Time)) to a local timestamp, like Date.parse("2021-09") == 1630454400000 for Pacific Daylight Time
 					if (iDate >= fromDate && iDate <= toDate) { // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
 						getPano(loc.pano, country);
 						//TODO: add settings.onlyOneLoc
