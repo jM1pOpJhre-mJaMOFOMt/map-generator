@@ -3,7 +3,7 @@
 	<div class="overlay top left flex-col gap">
 		<Logo class="mb-2" />
 		<div v-if="!state.started">
-			<h4 class="select mb-2">{{ select }} <Checkbox v-model:checked="settings.counties" v-on:change="toggleCounties" label="Show Counties" /></h4>
+			<h4 class="select mb-2">{{ select }} <!--<Checkbox v-model:checked="settings.counties" v-on:change="toggleCounties" label="Show Counties" />--></h4>
 			<div class="flex gap">
 				<Button @click="selectAll" class="bg-success" text="Select all" title="Select all" />
 				<Button v-if="selected.length" @click="deselectAll" class="bg-danger" text="Deselect all" title="Deselect all" />
@@ -142,8 +142,8 @@
 
 	import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 
-	import borders from "@/utils/countries2.geo.json";
-	import countiesGeojson from "@/utils/tl.json";
+	import borders from "@/utils/borders.json";
+	//import countiesGeojson from "@/utils/tl.json";
 
 	const state = reactive({
 		started: false,
@@ -167,7 +167,7 @@
 		getIntersection: false,
 		checkAllDates: true,
 		checkLinks: false,
-		counties: false
+		//counties: false
 	});
 
 	const select = ref("Select a country or draw a polygon");
@@ -187,10 +187,10 @@
 		style: style,
 		onEachFeature: onEachFeature,
 	});
-	const counties = L.geoJson(countiesGeojson, {
+	/*const counties = L.geoJson(countiesGeojson, {
 		style: style,
 		onEachFeature: onEachFeature
-	});
+	});*/
 	const drawControl = new L.Control.Draw({
 		position: "bottomleft",
 		draw: {
@@ -223,7 +223,7 @@
 		});
 
 		geojson.addTo(map);
-		toggleCounties();
+		//toggleCounties();
 		customPolygonsLayer.addTo(map);
 		markerLayer.addTo(map);
 		map.addControl(drawControl);
@@ -513,10 +513,10 @@
 
 	}
 
-function toggleCounties() {
+/*function toggleCounties() {
 	if (settings.counties) counties.addTo(map);
 	else counties.remove();
-}
+}*/
 
 	const randomInRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
