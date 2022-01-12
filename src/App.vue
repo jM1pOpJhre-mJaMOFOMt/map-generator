@@ -3,7 +3,7 @@
 	<div class="overlay top left flex-col gap">
 		<Logo class="mb-2" />
 		<div v-if="!state.started">
-			<h4 class="select mb-2">{{ select }}</h4>
+			<h4 class="select mb-2">{{ select }} <Checkbox v-model:checked="settings.counties" v-on:change="toggleCounties" label="Show Counties" /></h4>
 			<div class="flex gap">
 				<Button @click="selectAll" class="bg-success" text="Select all" title="Select all" />
 				<Button v-if="selected.length" @click="deselectAll" class="bg-danger" text="Deselect all" title="Deselect all" />
@@ -142,7 +142,8 @@
 
 	import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 
-	import borders from "@/utils/borders.json";
+	import borders from "@/utils/countries2.geo.json";
+	import countiesGeojson from "@/utils/tl.json";
 
 	const state = reactive({
 		started: false,
@@ -161,11 +162,12 @@
 		adjustPitch: true,
 		pitchDeviation: 10,
 		rejectByYear: false,
-		fromDate: "2009-01",
+		fromDate: "2007-05",
 		toDate: dateToday,
 		getIntersection: false,
 		checkAllDates: true,
-		checkLinks: true
+		checkLinks: false,
+		counties: false
 	});
 
 	const select = ref("Select a country or draw a polygon");
@@ -175,6 +177,7 @@
 
 	let map;
 	let allFound=[];
+	let successfulRequests = 0;
 	const customPolygonsLayer = new L.FeatureGroup();
 	const markerLayer = L.markerClusterGroup({
 		maxClusterRadius: 100,
@@ -183,6 +186,10 @@
 	const geojson = L.geoJson(borders, {
 		style: style,
 		onEachFeature: onEachFeature,
+	});
+	const counties = L.geoJson(countiesGeojson, {
+		style: style,
+		onEachFeature: onEachFeature
 	});
 	const drawControl = new L.Control.Draw({
 		position: "bottomleft",
@@ -216,6 +223,7 @@
 		});
 
 		geojson.addTo(map);
+		toggleCounties();
 		customPolygonsLayer.addTo(map);
 		markerLayer.addTo(map);
 		map.addControl(drawControl);
@@ -338,7 +346,7 @@
 				if (!state.started) return;
 				country.isProcessing = true;
 				const randomCoords = [];
-				while (randomCoords.length < Math.min(country.nbNeeded,5000)) {
+				while (randomCoords.length < Math.min(country.nbNeeded,1000)) {
 					const point = randomPointInPoly(country);
 					if (booleanPointInPolygon([point.lng, point.lat], country.feature)) {
 						randomCoords.push(point);
@@ -353,8 +361,6 @@
 		});
 	};
 
-	const checkedPanos = new Set();
-
 	function SVreq(loc, country) {
 		return new Promise(async (resolve, reject) => {
 			await getLoc(loc, country, resolve, reject);
@@ -365,6 +371,7 @@
 		SV.getPanoramaByLocation(new google.maps.LatLng(loc.lat, loc.lng), settings.radius, async (res, status) => {
 			let locations = [];
 			if (status != google.maps.StreetViewStatus.OK) return reject();
+			successfulRequests++;
 			if (settings.checkAllDates && res.time) {
 				if (!res.time.length) return reject();
 				let fromDate = Date.parse(settings.fromDate);
@@ -427,15 +434,20 @@
 	function getPanoDeep(id, country, depth) {
 		//console.log(id, depth);
 		if (depth > 5) return;
-		if (checkedPanos.has(id)) return;
-		else checkedPanos.add(id);
+		if (country.checkedPanos.has(id)) return;
+		else country.checkedPanos.add(id);
 		SV.getPanorama({"pano":id}, async (pano, status) => {
 			if (status == google.maps.StreetViewStatus.UNKNOWN_ERROR) {
-				checkedPanos.delete(id);
+				country.checkedPanos.delete(id);
 				return getPanoDeep(id, country, depth);
 			}
 			else if (status != google.maps.StreetViewStatus.OK) return;
+			successfulRequests++;
 			if(!pano)console.log(status, pano);
+
+			let inCountry = booleanPointInPolygon([pano.location.latLng.lng(), pano.location.latLng.lat()], country.feature);
+			let isPanoGoodAndInCountry = isPanoGood(pano) && inCountry;
+
 			if(settings.checkAllDates && pano.time) {
 				let fromDate = Date.parse(settings.fromDate);
 				let toDate = Date.parse(settings.toDate);
@@ -444,25 +456,28 @@
 					let date = Object.values(loc).find((val) => val instanceof Date);
 					let iDate = Date.parse(date.getFullYear() + "-" + (date.getMonth() > 8 ? "" : "0") + (date.getMonth() + 1)); // this will parse the Date object from res.time[i] (like Fri Oct 01 2021 00:00:00 GMT-0700 (Pacific Daylight Time)) to a local timestamp, like Date.parse("2021-09") == 1630454400000 for Pacific Daylight Time
 					if (iDate >= fromDate && iDate <= toDate) { // if date ranges from fromDate to toDate, set dateWithin to true and stop the loop
-						getPano(loc.pano, country);
+						getPanoDeep(loc.pano, country, isPanoGoodAndInCountry ? 1 : depth + 1);
 						//TODO: add settings.onlyOneLoc
 						//if(settings.onlyOneLoc)break;
 					}
 				}
 			}
+
+
+
 			if (settings.checkLinks) {
 				if (pano.links) {
 					for (let loc of pano.links) {
-						getPanoDeep(loc.pano, country, isPanoGood(pano)?1:depth+1);
+						getPanoDeep(loc.pano, country, isPanoGoodAndInCountry?1:depth+1);
 					}
 				}
 				if (pano.time) {
 					for (let loc of pano.time) {
-						getPanoDeep(loc.pano, country, isPanoGood(pano)?1:depth+1);
+						getPanoDeep(loc.pano, country, isPanoGoodAndInCountry?1:depth+1);
 					}
 				}
 			}
-			if (isPanoGood(pano)) addLoc(pano, country);
+			if (isPanoGoodAndInCountry) addLoc(pano, country);
 			return pano;
 		});
 	}
@@ -498,6 +513,11 @@
 
 	}
 
+function toggleCounties() {
+	if (settings.counties) counties.addTo(map);
+	else counties.remove();
+}
+
 	const randomInRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 	const randomPointInPoly = (polygon) => {
@@ -527,7 +547,8 @@
 		const index = selected.value.findIndex((x) => x.feature.properties.name === country.feature.properties.name);
 		if (index == -1) {
 			if (!country.found) country.found = [];
-			if (!country.nbNeeded) country.nbNeeded = 100;
+			if (!country.nbNeeded) country.nbNeeded = 10000000;
+			if (!country.checkedPanos) country.checkedPanos = new Set();
 			country.setStyle(highlighted());
 
 			selected.value.push(country);
@@ -540,7 +561,8 @@
 	function selectAll() {
 		selected.value = geojson.getLayers().map((country) => {
 			if (!country.found) country.found = [];
-			if (!country.nbNeeded) country.nbNeeded = 100;
+			if (!country.nbNeeded) country.nbNeeded = 10000000;
+			if (!country.checkedPanos) country.checkedPanos = new Set();
 			return country;
 		});
 		geojson.setStyle(highlighted);
