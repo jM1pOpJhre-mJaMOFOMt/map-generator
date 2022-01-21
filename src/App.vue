@@ -346,13 +346,14 @@
 				if (!state.started) return;
 				country.isProcessing = true;
 				const randomCoords = [];
-				while (randomCoords.length < Math.min(country.nbNeeded,1000)) {
+				let n = Math.min(country.nbNeeded*100,1000);
+				while (randomCoords.length < n) {
 					const point = randomPointInPoly(country);
 					if (booleanPointInPolygon([point.lng, point.lat], country.feature)) {
 						randomCoords.push(point);
 					}
 				}
-				for (let locationGroup of randomCoords.chunk(100)) {
+				for (let locationGroup of randomCoords.chunk(75)) {
 					await Promise.allSettled(locationGroup.map((l) => SVreq(l, country)));
 				}
 			}
