@@ -601,7 +601,6 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		if (index == -1) {
 			initLayer(country);
 			country.setStyle(highlighted());
-
 			selected.value.push(country);
 		} else {
 			selected.value.splice(index, 1);
@@ -620,6 +619,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 	function selectAllLayer(layer) {
 		layer.setStyle(highlighted);
 		for (let feature in layer._layers) {
+			initLayer(layer._layers[feature]);
 			selected.value.push(layer._layers[feature]);
 		}
 	}
