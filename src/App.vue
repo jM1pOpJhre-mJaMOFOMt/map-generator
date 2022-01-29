@@ -371,7 +371,6 @@
 
 	async function getLoc(loc, country, resolve, reject) {
 		SV.getPanoramaByLocation(new google.maps.LatLng(loc.lat, loc.lng), settings.radius, async (res, status) => {
-			let locations = [];
 			if (status != google.maps.StreetViewStatus.OK) return reject();
 			successfulRequests++;
 			if (settings.checkAllDates && res.time) {
@@ -391,14 +390,13 @@
 					}
 				}
 				if (!dateWithin) return reject();
-			}
-			else {
+			} else {
 				if (Date.parse(res.imageDate) < Date.parse(settings.fromDate) || Date.parse(res.imageDate) > Date.parse(settings.toDate)) return reject();
 				if (settings.rejectDateless && !res.imageDate) return reject();
 				getPano(res.location.pano, country);
 			}
 
-			resolve(locations);
+			resolve();
 		}).catch((e) => reject(e.message));
 	}
 
