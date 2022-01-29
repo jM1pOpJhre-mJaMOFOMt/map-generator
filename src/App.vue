@@ -6,7 +6,7 @@
 			<h4 class="select mb-2">{{ select }}</h4>
 			<div class="flex gap">
 				<Button @click="selectAll" class="bg-success" text="Select all countries" title="Select all countries" />
-				<Button v-if="selected.length" @click="deselectAll" class="bg-danger" text="Deselect all countries" title="Deselect all countries" />
+				<Button v-if="selected.length" @click="deselectAll" class="bg-danger" text="Deselect all" title="Deselect all" />
 			</div>
 		</div>
 
@@ -243,9 +243,6 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 			polygon.feature.properties.name = `Custom polygon ${state.polygonID}`;
 			polygon.setStyle(customPolygonStyle());
 			polygon.setStyle(highlighted());
-			polygon.on("mouseover", (e) => highlightFeature(e));
-			polygon.on("mouseout", (e) => resetHighlight(e));
-			polygon.on("click", (e) => selectCountry(e));
 			customPolygonsLayer.addLayer(polygon);
 			selected.value.push(polygon);
 		});
@@ -291,7 +288,13 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 					style: style,
 					onEachFeature: onEachFeature
 				});
+				for (let layer in newLayer._layers) {
+					let polygon = newLayer._layers[layer];
+					polygon.setStyle(customPolygonStyle());
+					polygon.setStyle(highlighted());
+				}
 				newLayer.addTo(map);
+
 				customLayers[file.name] = newLayer;
 			} catch (e) {
 				alert("Invalid GeoJSON.");
@@ -489,7 +492,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 			}
 			else if (status != google.maps.StreetViewStatus.OK) return;
 			successfulRequests++;
-			if(!pano)console.log(status, pano);
+			if(!pano) console.log(status, pano);
 
 			let inCountry = booleanPointInPolygon([pano.location.latLng.lng(), pano.location.latLng.lat()], country.feature);
 			let isPanoGoodAndInCountry = isPanoGood(pano) && inCountry;
@@ -620,7 +623,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		layer.setStyle(highlighted);
 		for (let feature in layer._layers) {
 			initLayer(layer._layers[feature]);
-			selected.value.push(layer._layers[feature]);
+			if (!selected.value.includes(layer._layers[feature])) selected.value.push(layer._layers[feature]);
 		}
 	}
 
