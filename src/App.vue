@@ -3,10 +3,10 @@
 	<div class="overlay top left flex-col gap">
 		<Logo class="mb-2" />
 		<div v-if="!state.started">
-			<h4 class="select mb-2">{{ select }} <!--<Checkbox v-model:checked="settings.counties" v-on:change="toggleCounties" label="Show Counties" />--></h4>
+			<h4 class="select mb-2">{{ select }}</h4>
 			<div class="flex gap">
-				<Button @click="selectAll" class="bg-success" text="Select all" title="Select all" />
-				<Button v-if="selected.length" @click="deselectAll" class="bg-danger" text="Deselect all" title="Deselect all" />
+				<Button @click="selectAll" class="bg-success" text="Select all countries" title="Select all countries" />
+				<Button v-if="selected.length" @click="deselectAll" class="bg-danger" text="Deselect all countries" title="Deselect all countries" />
 			</div>
 		</div>
 
@@ -15,7 +15,7 @@
 			<div v-for="country of selected" class="line flex space-between">
 				<div class="flex-center">
 					<span v-if="country.feature.properties.code" :class="`flag-icon flag-` + country.feature.properties.code.toLowerCase()"></span>
-					{{ country.feature.properties.name }}
+					{{ getName(country) }}
 					<Spinner v-if="state.started && country.isProcessing" class="ml-2" />
 				</div>
 				<div>
@@ -39,45 +39,40 @@
 			<hr />
 
 			<div v-if="settings.rejectUnofficial">
-				<Checkbox v-model:checked="settings.rejectNoDescription" label="Reject locations without description" />
-				<small>This might prevent trekkers in most cases, but can reject regular streetview without description. (eg. Mongolia/South Korea panoramas mostly don't
-					have description)</small>
+				<Checkbox v-model:checked="settings.rejectNoDescription" label="Reject locations without description" title="This might prevent trekkers in most cases, but can reject regular streetview without description. (eg. Mongolia/South Korea panoramas mostly don't have description)" />
 					<hr />
 					<Checkbox v-model:checked="settings.getIntersection" label="Prefer intersections" />
 					<hr />
 				</div>
 
-				<Checkbox v-model:checked="settings.rejectDateless" label="Reject locations without date" />
-				<small>This will prevent the local business tripod coverage that doesn't have a date.</small>
+				<Checkbox v-model:checked="settings.rejectDateless" label="Reject locations without date" title="This will prevent the local business tripod coverage that doesn't have a date." />
 				<hr />
-
-				<Checkbox v-model:checked="settings.adjustHeading" label="Adjust heading" />
-				<div v-if="settings.adjustHeading" class="indent">
-					<label class="flex wrap">
-						Deviation <input type="range" v-model.number="settings.headingDeviation" min="0" max="50" /> (+/- {{ settings.headingDeviation }}°)
-					</label>
-					<small>0° will point directly towards the road.</small>
+				<div class="adjustHeading" title="0° will point directly towards the road.">
+					<Checkbox v-model:checked="settings.adjustHeading" label="Adjust heading" />
+					<div v-if="settings.adjustHeading" class="indent">
+						<label class="flex wrap">
+							Deviation <input type="range" v-model.number="settings.headingDeviation" min="0" max="50" /> (+/- {{ settings.headingDeviation }}°)
+						</label>
+					</div>
+					<hr />
 				</div>
-				<hr />
 
-				<Checkbox v-model:checked="settings.adjustPitch" label="Adjust pitch" />
-				<div v-if="settings.adjustPitch" class="indent">
-					<label class="flex wrap">
-						Pitch deviation <input type="range" v-model.number="settings.pitchDeviation" min="-90" max="90" /> ({{ settings.pitchDeviation }}°)
-					</label>
-					<small>0 by default. -90° for tarmac/+90° for sky</small>
+				<div class="adjustPitch" title="0 by default. -90° for tarmac/+90° for sky">
+					<Checkbox v-model:checked="settings.adjustPitch" label="Adjust pitch" />
+					<div v-if="settings.adjustPitch" class="indent">
+						<label class="flex wrap">
+							Pitch deviation <input type="range" v-model.number="settings.pitchDeviation" min="-90" max="90" /> ({{ settings.pitchDeviation }}°)
+						</label>
+					</div>
+					<hr />
 				</div>
-				<hr />
 
-				<div>
+				<div title="Radius in which to search for a panorama.
+Keep it between 100-1000m for best results. Increase it for poorly covered territories/intersections/specific search cases.">
 					Radius
 					<input type="number" v-model.number="settings.radius" @change="handleRadiusInput" />
 					m
 				</div>
-				<small>
-					Radius in which to search for a panorama.<br />
-					Keep it between 100-1000m for best results. Increase it for poorly covered territories/intersections/specific search cases.
-				</small>
 				<hr />
 
 				<div class="flex space-between mb-2">
@@ -90,13 +85,23 @@
 				</div>
 				<hr />
 
-				<Checkbox v-model:checked="settings.checkAllDates" label="Check all dates" />
-				<small>
-					This will check the dates of nearby coverage (the dates shown when you click the time machine/clock icon). This is helpful for finding coverage within a specific timeframe.
-				</small>
+				<Checkbox v-model:checked="settings.checkAllDates" label="Check all dates" title="This will check the dates of nearby coverage (the dates shown when you click the time machine/clock icon). This is helpful for finding coverage within a specific timeframe." />
 				<hr />
 
 				<Checkbox v-model:checked="settings.checkLinks" label="Check linked panos" />
+				<hr />
+
+				<div class="customLayers">
+					<h4 class="center mb-2">Custom Layers ({{ Object.keys(customLayers).length }})</h4>
+					<input type="file" @change="fileProcess" accept=".txt,.json,.geojson" />
+					<div v-for="(value, name, index) of customLayers" class="line flex space-between">
+						<div class="flex-center">
+							{{ name }}
+						</div>
+						<a @click="selectAllLayer(value)" class="smallbtn bg-success">Select All</a>
+						<button @click="removeCustomLayer(name)" type="button" class="close" aria-label="Close">×</button>
+					</div>
+				</div>
 			</div>
 
 			<Button
@@ -106,6 +111,8 @@
 			:text="state.started ? 'Pause' : 'Start'"
 			title="Space bar/Enter"
 			/>
+
+			<Button @click="exportDrawnLayer" text="Export Drawn Layer" style="background-color:#005CC8" />
 		</div>
 
 		<div v-if="!state.started && hasResults" class="overlay export bottom right">
@@ -143,7 +150,6 @@
 	import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 
 	import borders from "@/utils/borders.json";
-	//import countiesGeojson from "@/utils/tl.json";
 
 	const state = reactive({
 		started: false,
@@ -166,8 +172,7 @@
 		toDate: dateToday,
 		getIntersection: false,
 		checkAllDates: true,
-		checkLinks: false,
-		//counties: false
+		checkLinks: false
 	});
 
 	const select = ref("Select a country or draw a polygon");
@@ -177,6 +182,7 @@
 
 	let map;
 	let allFound=[];
+	let customLayers = {};
 	let successfulRequests = 0;
 	const customPolygonsLayer = new L.FeatureGroup();
 	const markerLayer = L.markerClusterGroup({
@@ -187,10 +193,6 @@
 		style: style,
 		onEachFeature: onEachFeature,
 	});
-	/*const counties = L.geoJson(countiesGeojson, {
-		style: style,
-		onEachFeature: onEachFeature
-	});*/
 	const drawControl = new L.Control.Draw({
 		position: "bottomleft",
 		draw: {
@@ -223,7 +225,6 @@
 		});
 
 		geojson.addTo(map);
-		//toggleCounties();
 		customPolygonsLayer.addTo(map);
 		markerLayer.addTo(map);
 		map.addControl(drawControl);
@@ -248,13 +249,13 @@
 			e.layers.eachLayer((layer) => {
 				const polygon = layer;
 				polygon.feature = layer.toGeoJSON();
-				const index = selected.value.findIndex((x) => x.feature.properties.name === layer.feature.properties.name);
+				const index = selected.value.findIndex((x) => getName(x) === getName(layer));
 				if (index != -1) selected.value[index] = polygon;
 			});
 		});
 		map.on("draw:deleted", (e) => {
 			e.layers.eachLayer((layer) => {
-				const index = selected.value.findIndex((x) => x.feature.properties.name === layer.feature.properties.name);
+				const index = selected.value.findIndex((x) => getName(x) === getName(layer));
 				if (index != -1) selected.value.splice(index, 1);
 			});
 		});
@@ -266,6 +267,47 @@
 		});
 		resizeObserver.observe(mapDiv);
 	});
+
+	async function readFileAsText(file) {
+		let result = await new Promise((resolve) => {
+			let fileReader = new FileReader();
+			fileReader.onload = (e) => resolve(fileReader.result);
+			fileReader.readAsText(file);
+		});
+
+		return result;
+	}
+
+	async function fileProcess(e) {
+		for (let file of e.target.files) {
+			let result = await readFileAsText(file);
+			try {
+				let JSONResult = JSON.parse(result);
+				let newLayer = L.geoJson(JSONResult, {
+					style: style,
+					onEachFeature: onEachFeature
+				});
+				newLayer.addTo(map);
+				customLayers[file.name] = newLayer;
+			} catch (e) {
+				alert("Invalid GeoJSON.");
+			}
+		}
+	}
+
+	function removeCustomLayer(name) {
+		customLayers[name].remove();
+		delete customLayers[name];
+	}
+
+	function exportDrawnLayer() {
+		const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(customPolygonsLayer.toGeoJSON()));
+		const fileName = `DrawnLayer.geojson`;
+		const linkElement = document.createElement("a");
+		linkElement.href = dataUri;
+		linkElement.download = fileName;
+		linkElement.click();
+	}
 
 	const handleRadiusInput = (e) => {
 		const value = parseInt(e.target.value);
@@ -513,11 +555,6 @@
 
 	}
 
-/*function toggleCounties() {
-	if (settings.counties) counties.addTo(map);
-	else counties.remove();
-}*/
-
 	const randomInRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 	const randomPointInPoly = (polygon) => {
@@ -541,14 +578,24 @@
 		});
 	}
 
+	function getName(poly) {
+		let properties = poly.feature.properties;
+		return properties.name || properties.NAME || properties.NAMELSAD || properties.NAMELSAD10 || properties.city || properties.CITY || properties.county || properties.COUNTY || properties.COUNTY_STATE_CODE || properties.COUNTY_STATE_NAME || properties.PRNAME || properties.state || properties.STATE || properties.country || properties.COUNTRY || properties.id || properties.ID;
+	}
+
+	function initLayer(layer) {
+		if (!layer.found) layer.found = [];
+		if (!layer.nbNeeded) layer.nbNeeded = 10000000;
+		if (!layer.checkedPanos) layer.checkedPanos = new Set();
+		return layer;
+	}
+
 	function selectCountry(e) {
 		if (state.started) return;
 		const country = e.target;
-		const index = selected.value.findIndex((x) => x.feature.properties.name === country.feature.properties.name);
+		const index = selected.value.findIndex((x) => getName(x) === getName(country));
 		if (index == -1) {
-			if (!country.found) country.found = [];
-			if (!country.nbNeeded) country.nbNeeded = 10000000;
-			if (!country.checkedPanos) country.checkedPanos = new Set();
+			initLayer(country);
 			country.setStyle(highlighted());
 
 			selected.value.push(country);
@@ -560,12 +607,17 @@
 
 	function selectAll() {
 		selected.value = geojson.getLayers().map((country) => {
-			if (!country.found) country.found = [];
-			if (!country.nbNeeded) country.nbNeeded = 10000000;
-			if (!country.checkedPanos) country.checkedPanos = new Set();
+			initLayer(country);
 			return country;
 		});
 		geojson.setStyle(highlighted);
+	}
+
+	function selectAllLayer(layer) {
+		layer.setStyle(highlighted);
+		for (let feature in layer._layers) {
+			selected.value.push(layer._layers[feature]);
+		}
 	}
 
 	function deselectAll() {
@@ -577,15 +629,15 @@
 	function highlightFeature(e) {
 		if (state.started) return;
 		const layer = e.target;
-		const index = selected.value.findIndex((x) => x.feature.properties.name === layer.feature.properties.name);
+		const index = selected.value.findIndex((x) => getName(x) === getName(layer));
 		if (index == -1) {
 			layer.setStyle(highlighted());
 		}
-		select.value = `${layer.feature.properties.name} ${layer.found ? "(" + layer.found.length + ")" : "(0)"}`;
+		select.value = `${getName(layer)} ${layer.found ? "(" + layer.found.length + ")" : "(0)"}`;
 	}
 	function resetHighlight(e) {
 		const layer = e.target;
-		const index = selected.value.findIndex((x) => x.feature.properties.name === layer.feature.properties.name);
+		const index = selected.value.findIndex((x) => getName(x) === getName(layer));
 		if (index == -1) {
 			layer.setStyle(removeHighlight());
 		}
@@ -627,6 +679,25 @@
 
 	<style>
 	@import "@/assets/main.css";
+	.smallbtn {
+		width: 25%;
+    	color: #000;
+    	display: block;
+    	padding: 0.2rem;
+    	text-align: center;
+    	border-radius: 4px;
+    	cursor: pointer;
+    	user-select: none;
+    	box-shadow: 0 0 2px rgb(0 0 0 / 40%);
+	}
+	button.close {
+    	padding: 0;
+    	background-color: transparent;
+    	border: 0;
+		font-size: 25px;
+		color: red;
+		cursor: pointer;
+	}
 	#map {
 		z-index: 0;
 		height: 100vh;
