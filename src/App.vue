@@ -233,7 +233,8 @@
 			const polygon = e.layer;
 			polygon.feature = e.layer.toGeoJSON();
 			polygon.found = [];
-			polygon.nbNeeded = 1000000;
+			polygon.nbNeeded = 10000000;
+			polygon.checkedPanos = new Set();
 			polygon.feature.properties.name = `Custom polygon ${state.polygonID}`;
 			polygon.setStyle(customPolygonStyle());
 			polygon.setStyle(highlighted());
