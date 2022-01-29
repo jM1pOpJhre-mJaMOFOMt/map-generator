@@ -89,6 +89,9 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 				<hr />
 
 				<Checkbox v-model:checked="settings.checkLinks" label="Check linked panos" />
+				<div v-if="settings.checkLinks">
+					<input type="range" v-model.number="settings.linksDepth" min="1" max="10" /> Depth: {{ settings.linksDepth }}
+				</div>
 				<hr />
 
 				<div class="customLayers">
@@ -172,7 +175,8 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		toDate: dateToday,
 		getIntersection: false,
 		checkAllDates: true,
-		checkLinks: false
+		checkLinks: false,
+		linksDepth: 4
 	});
 
 	const select = ref("Select a country or draw a polygon");
@@ -475,7 +479,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 
 	function getPanoDeep(id, country, depth) {
 		//console.log(id, depth);
-		if (depth > 5) return;
+		if (depth > settings.linksDepth) return;
 		if (country.checkedPanos.has(id)) return;
 		else country.checkedPanos.add(id);
 		SV.getPanorama({"pano":id}, async (pano, status) => {
