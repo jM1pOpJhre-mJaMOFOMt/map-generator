@@ -291,7 +291,6 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 				for (let layer in newLayer._layers) {
 					let polygon = newLayer._layers[layer];
 					polygon.setStyle(customPolygonStyle());
-					polygon.setStyle(highlighted());
 				}
 				newLayer.addTo(map);
 
