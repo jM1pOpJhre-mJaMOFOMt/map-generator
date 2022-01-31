@@ -244,6 +244,9 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 			polygon.feature.properties.name = `Custom polygon ${state.polygonID}`;
 			polygon.setStyle(customPolygonStyle());
 			polygon.setStyle(highlighted());
+			polygon.on("mouseover", (e) => highlightFeature(e));
+			polygon.on("mouseout", (e) => resetHighlight(e));
+			polygon.on("click", (e) => selectCountry(e));
 			customPolygonsLayer.addLayer(polygon);
 			selected.value.push(polygon);
 		});
