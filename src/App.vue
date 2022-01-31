@@ -555,8 +555,6 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 
 
 	function addLoc(pano, country) {
-		if (allFound.some(l => l.panoId == pano.location.pano)) return; // prevent duplicates
-
 		let location = {
 			panoId: pano.location.pano,
 			lat: pano.location.latLng.lat(),
