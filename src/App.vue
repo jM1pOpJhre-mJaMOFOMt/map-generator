@@ -18,6 +18,7 @@
 					{{ getName(country) }}
 					<Spinner v-if="state.started && country.isProcessing" class="ml-2" />
 				</div>
+				<label class="smallbtn bg-success"><input type="file" @change="locationsFileProcess($event, country)" accept=".json" hidden>Import Locations</label>
 				<div>
 					{{ country.found ? country.found.length : "0" }} / <input type="number" :min="country.found ? country.found.length : 0" v-model="country.nbNeeded" />
 				</div>
@@ -96,12 +97,12 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 
 				<div class="customLayers">
 					<h4 class="center mb-2">Custom Layers ({{ Object.keys(customLayers).length }})</h4>
-					<input type="file" @change="fileProcess" accept=".txt,.json,.geojson" />
+					<input type="file" @change="customLayerFileProcess" accept=".txt,.json,.geojson" />
 					<div v-for="(value, name, index) of customLayers" class="line flex space-between">
 						<div class="flex-center">
 							{{ name }}
 						</div>
-						<a @click="selectAllLayer(value)" class="smallbtn bg-success">Select All</a>
+						<a @click="selectAllLayer(value)" class="smallbtn bg-success" style="width:25%;">Select All</a>
 						<button @click="removeCustomLayer(name)" type="button" class="close" aria-label="Close">×</button>
 					</div>
 				</div>
@@ -279,7 +280,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		return result;
 	}
 
-	async function fileProcess(e) {
+	async function customLayerFileProcess(e) {
 		for (let file of e.target.files) {
 			let result = await readFileAsText(file);
 			try {
@@ -297,6 +298,28 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 				customLayers[file.name] = newLayer;
 			} catch (e) {
 				alert("Invalid GeoJSON.");
+			}
+		}
+	}
+
+	async function locationsFileProcess(e, country) {
+		for (let file of e.target.files) {
+			let result = await readFileAsText(file);
+			if (file.type == "application/json") {
+				try {
+					let JSONResult = JSON.parse(result);
+					if (!JSONResult.customCoordinates) {
+						throw Error;
+					}
+					for (let location of JSONResult.customCoordinates) {
+						if (!location.panoId || !location.lat || !location.lng) continue;
+						addLocation(location, country);
+					}
+				} catch (e) {
+					alert("Invalid JSON.");
+				}
+			} else {
+				alert("Unknown file type: " + file.type + ". Only JSON may be imported.");
 			}
 		}
 	}
@@ -383,8 +406,8 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 
 	top.importJSON = (list) => {
 		for (let location of list) {
-			if (!location.pano || !location.lat || !location.lng) continue;
-			if (allFound.some(l => l.pano == location.pano)) continue; // prevent duplicates
+			if (!location.panoId || !location.lat || !location.lng) continue;
+			if (allFound.some(l => l.pano == location.panoId)) continue; // prevent duplicates
 			allFound.push(location);
 		}
 	};
@@ -532,10 +555,10 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 
 
 	function addLoc(pano, country) {
-		if (allFound.some(l => l.pano == pano.location.pano)) return; // prevent duplicates
+		if (allFound.some(l => l.panoId == pano.location.pano)) return; // prevent duplicates
 
 		let location = {
-			pano: pano.location.pano,
+			panoId: pano.location.pano,
 			lat: pano.location.latLng.lat(),
 			lng: pano.location.latLng.lng(),
 			heading: settings.adjustHeading && pano.links.length > 0 ? parseInt(pano.links[0].heading) + randomInRange(-settings.headingDeviation, settings.headingDeviation) : 0,
@@ -543,6 +566,11 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 			imageDate: pano.imageDate
 		};
 
+		return addLocation(location, country);
+	}
+
+	function addLocation(location, country) {
+		if (allFound.some(l => l.panoId == location.panoId)) return;
 		allFound.push(location);
 
 		if (!country || country.found.length < country.nbNeeded) {
@@ -550,7 +578,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 			L.marker([location.lat, location.lng], { icon: myIcon })
 			.on("click", () => {
 				window.open(
-					`https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.pano}
+					`https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}
 					${location.heading ? "&heading=" + location.heading : ""}
 					${location.pitch ? "&pitch=" + location.pitch : ""}`,
 					"_blank"
@@ -558,7 +586,6 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 			})
 			.addTo(markerLayer);
 		}
-
 	}
 
 	const randomInRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -686,7 +713,6 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 	<style>
 	@import "@/assets/main.css";
 	.smallbtn {
-		width: 25%;
     	color: #000;
     	display: block;
     	padding: 0.2rem;
