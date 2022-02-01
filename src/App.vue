@@ -98,6 +98,11 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 				<div class="customLayers">
 					<h4 class="center mb-2">Custom Layers ({{ Object.keys(customLayers).length }})</h4>
 					<input type="file" @change="customLayerFileProcess" accept=".txt,.json,.geojson" />
+					<select @change="importLayer">
+						<option value=""></option>
+						<option value="/geojson/us_county_min.json">US Counties</option>
+						<option value="/geojson/urban_areas.geojson">Urban Areas</option>
+					</select>
 					<div v-for="(value, name, index) of customLayers" class="line flex space-between">
 						<div class="flex-center">
 							{{ name }}
@@ -288,20 +293,28 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 			let result = await readFileAsText(file);
 			try {
 				let JSONResult = JSON.parse(result);
-				let newLayer = L.geoJson(JSONResult, {
-					style: style,
-					onEachFeature: onEachFeature
-				});
-				for (let layer in newLayer._layers) {
-					let polygon = newLayer._layers[layer];
-					polygon.setStyle(customPolygonStyle());
-				}
-				newLayer.addTo(map);
-
-				customLayers[file.name] = newLayer;
+				addCustomLayer(JSONResult, file.name);
 			} catch (e) {
 				alert("Invalid GeoJSON.");
 			}
+		}
+	}
+
+	function addCustomLayer(geoJSON, name) {
+		try {
+			let newLayer = L.geoJson(geoJSON, {
+				style: style,
+				onEachFeature: onEachFeature
+			});
+			for (let layer in newLayer._layers) {
+				let polygon = newLayer._layers[layer];
+				polygon.setStyle(customPolygonStyle());
+			}
+			newLayer.addTo(map);
+
+			customLayers[name] = newLayer;
+		} catch (e) {
+			alert("Invalid GeoJSON.");
 		}
 	}
 
@@ -325,6 +338,15 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 				alert("Unknown file type: " + file.type + ". Only JSON may be imported.");
 			}
 		}
+	}
+
+	async function importLayer(e) {
+		if (!e.target.value) return;
+		const response = await fetch(e.target.value);
+		const data = await response.json();
+		addCustomLayer(data, e.target.value);
+		e.target.options[e.target.selectedIndex].remove();
+		e.target.value = "";
 	}
 
 	function removeCustomLayer(name) {
@@ -614,7 +636,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 
 	function getName(poly) {
 		let properties = poly.feature.properties;
-		return properties.name || properties.NAME || properties.NAMELSAD || properties.NAMELSAD10 || properties.city || properties.CITY || properties.county || properties.COUNTY || properties.COUNTY_STATE_CODE || properties.COUNTY_STATE_NAME || properties.PRNAME || properties.state || properties.STATE || properties.country || properties.COUNTRY || properties.id || properties.ID;
+		return properties.name || properties.NAME || properties.NAMELSAD || properties.NAMELSAD10 || properties.city || properties.CITY || properties.county || properties.COUNTY || properties.COUNTY_STATE_CODE || properties.COUNTY_STATE_NAME || properties.PRNAME || properties.prov_name_en || properties.state || properties.STATE || properties.country || properties.COUNTRY || properties.id || properties.ID;
 	}
 
 	function initLayer(layer) {
@@ -658,6 +680,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		selected.value.length = 0;
 		geojson.setStyle(style());
 		customPolygonsLayer.setStyle(customPolygonStyle());
+		Object.values(customLayers).forEach(customLayer => Object.values(customLayer._layers).forEach(polygon => polygon.setStyle(customPolygonStyle())));
 	}
 
 	function highlightFeature(e) {
