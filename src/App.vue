@@ -182,7 +182,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		getIntersection: false,
 		checkAllDates: true,
 		checkLinks: false,
-		linksDepth: 4
+		linksDepth: 2
 	});
 
 	const select = ref("Select a country or draw a polygon");
