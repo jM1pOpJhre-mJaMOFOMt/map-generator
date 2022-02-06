@@ -432,7 +432,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 	top.importJSON = (list) => {
 		for (let location of list) {
 			if (!location.panoId || !location.lat || !location.lng) continue;
-			if (allFound.some(l => l.pano == location.panoId)) continue; // prevent duplicates
+			if (allFound.some(l => l.panoId == location.panoId)) continue; // prevent duplicates
 			allFound.push(location);
 		}
 	};
