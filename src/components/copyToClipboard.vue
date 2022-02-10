@@ -13,8 +13,8 @@ const props = defineProps({
 const text = ref("Clipboard");
 
 const copyToClipboard = () => {
-	const data = [];
-	props.selection.map((country) => data.push(...country.found));
+	let data = [];
+	props.selection.forEach((country) => data = data.concat(country.found));
 	navigator.clipboard
 		.writeText(JSON.stringify({ customCoordinates: data }))
 		.then(() => {

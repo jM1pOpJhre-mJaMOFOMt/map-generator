@@ -12,6 +12,7 @@
 
 		<div v-if="selected.length" class="selected">
 			<h4 class="center mb-2">Countries/Territories ({{ selected.length }})</h4>
+			<Checkbox v-model:checked="settings.markersOnImport" label="Add markers to imported locations" title="This may affect performance." />
 			<div v-for="country of selected" class="line flex space-between">
 				<div class="flex-center">
 					<span v-if="country.feature.properties.code" :class="`flag-icon flag-` + country.feature.properties.code.toLowerCase()"></span>
@@ -182,7 +183,8 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		getIntersection: false,
 		checkAllDates: true,
 		checkLinks: false,
-		linksDepth: 2
+		linksDepth: 2,
+		markersOnImport: false
 	});
 
 	const select = ref("Select a country or draw a polygon");
@@ -191,7 +193,8 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 	const hasResults = computed(() => selected.value.some((country) => country.found.length > 0));
 
 	let map;
-	let allFound=[];
+	let allFound = [];
+	const allFoundPanoIds = new Set();
 	let customLayers = {};
 	let successfulRequests = 0;
 	const customPolygonsLayer = new L.FeatureGroup();
@@ -329,7 +332,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 					}
 					for (let location of JSONResult.customCoordinates) {
 						if (!location.panoId || !location.lat || !location.lng) continue;
-						addLocation(location, country);
+						addLocation(location, country, settings.markersOnImport);
 					}
 				} catch (e) {
 					alert("Invalid JSON.");
@@ -421,20 +424,12 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 	};
 
 	top.allJSON = () => {
-		const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allFound));
+		const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ customCoordinates: allFound }));
 		const fileName = `Generated map (${allFound.length} location${allFound.length > 1 ? "s" : ""}).json`;
 		const linkElement = document.createElement("a");
 		linkElement.href = dataUri;
 		linkElement.download = fileName;
 		linkElement.click();
-	};
-
-	top.importJSON = (list) => {
-		for (let location of list) {
-			if (!location.panoId || !location.lat || !location.lng) continue;
-			if (allFound.some(l => l.panoId == location.panoId)) continue; // prevent duplicates
-			allFound.push(location);
-		}
 	};
 
 	const generate = async (country) => {
@@ -589,25 +584,17 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 			imageDate: pano.imageDate
 		};
 
-		return addLocation(location, country);
+		return addLocation(location, country, true);
 	}
 
-	function addLocation(location, country) {
-		if (allFound.some(l => l.panoId == location.panoId)) return;
+	function addLocation(location, country, marker) {
+		if (allFoundPanoIds.has(location.panoId)) return;
 		allFound.push(location);
+		allFoundPanoIds.add(location.panoId);
 
 		if (!country || country.found.length < country.nbNeeded) {
 			if (country) country.found.push(location);
-			L.marker([location.lat, location.lng], { icon: myIcon })
-			.on("click", () => {
-				window.open(
-					`https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}
-					${location.heading ? "&heading=" + location.heading : ""}
-					${location.pitch ? "&pitch=" + location.pitch : ""}`,
-					"_blank"
-				);
-			})
-			.addTo(markerLayer);
+			if (marker) L.marker([location.lat, location.lng], { icon: myIcon }).on("click", () => {window.open(`https://www.google.com/maps/@?api=1&map_action=pano&pano=${location.panoId}${location.heading ? "&heading=" + location.heading : ""}${location.pitch ? "&pitch=" + location.pitch : ""}`,"_blank");}).addTo(markerLayer);
 		}
 	}
 
