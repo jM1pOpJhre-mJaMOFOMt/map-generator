@@ -91,6 +91,10 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 				<hr />
 
 				<Checkbox v-model:checked="settings.checkLinks" label="Check linked panos" />
+				<hr />
+
+				<Checkbox v-model:checked="settings.cluster" v-on:change="updateClusters" label="Cluster markers" title="For lag reduction." />
+
 				<div v-if="settings.checkLinks">
 					<input type="range" v-model.number="settings.linksDepth" min="1" max="10" /> Depth: {{ settings.linksDepth }}
 				</div>
@@ -157,6 +161,8 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 	import "leaflet.markercluster/dist/MarkerCluster.css";
 	import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
+	import "leaflet.markercluster.freezable/dist/leaflet.markercluster.freezable.js";
+
 	import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 
 	import borders from "@/utils/borders.json";
@@ -184,7 +190,8 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		checkAllDates: true,
 		checkLinks: false,
 		linksDepth: 2,
-		markersOnImport: false
+		markersOnImport: false,
+		cluster: true
 	});
 
 	const select = ref("Select a country or draw a polygon");
@@ -250,6 +257,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		geojson.addTo(map);
 		customPolygonsLayer.addTo(map);
 		markerLayer.addTo(map);
+		updateClusters();
 		L.control.layers(baseMaps, overlayMaps, {position: "bottomleft"}).addTo(map);
 		map.addControl(drawControl);
 
@@ -442,6 +450,11 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		linkElement.download = fileName;
 		linkElement.click();
 	};
+
+	function updateClusters() {
+    	if (settings.cluster) markerLayer.enableClustering();
+    	else markerLayer.disableClustering();
+	}
 
 	const generate = async (country) => {
 		return new Promise(async (resolve) => {
