@@ -533,6 +533,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		if (locDate < fromDate || locDate > toDate) return false;
 		if (settings.onlyOneInTimeframe) {
 			for (let loc of pano.time) {
+				if (settings.rejectUnofficial && loc.pano.length != 22) continue;
 				if (loc.pano == pano.location.pano) continue;
 				let date = Object.values(loc).find((val) => val instanceof Date);
 				let iDate = Date.parse(date.getFullYear() + "-" + (date.getMonth() > 8 ? "" : "0") + (date.getMonth() + 1));
