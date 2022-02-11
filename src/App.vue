@@ -737,7 +737,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 	function highlighted() {
 		return {
 			fillColor: getRandomColor(),
-			fillOpacity: 0.6,
+			fillOpacity: 0.5,
 		};
 	}
 	function removeHighlight() {
