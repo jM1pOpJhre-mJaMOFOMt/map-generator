@@ -85,6 +85,7 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 					<label>To</label>
 					<input type="month" v-model="settings.toDate" :max="dateToday" />
 				</div>
+				<Checkbox v-model:checked="settings.onlyOneInTimeframe" label="Only one location in timeframe" title="Only allow locations that don't have other nearby coverage in timeframe." />
 				<hr />
 
 				<Checkbox v-model:checked="settings.checkAllDates" label="Check all dates" title="This will check the dates of nearby coverage (the dates shown when you click the time machine/clock icon). This is helpful for finding coverage within a specific timeframe." />
@@ -191,7 +192,8 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		checkLinks: false,
 		linksDepth: 2,
 		markersOnImport: false,
-		cluster: true
+		cluster: true,
+		onlyOneInTimeframe: false
 	});
 
 	const select = ref("Select a country or draw a polygon");
@@ -529,7 +531,14 @@ Keep it between 100-1000m for best results. Increase it for poorly covered terri
 		let toDate = Date.parse(settings.toDate);
 		let locDate = Date.parse(pano.imageDate);
 		if (locDate < fromDate || locDate > toDate) return false;
-
+		if (settings.onlyOneInTimeframe) {
+			for (let loc of pano.time) {
+				if (loc.pano == pano.location.pano) continue;
+				let date = Object.values(loc).find((val) => val instanceof Date);
+				let iDate = Date.parse(date.getFullYear() + "-" + (date.getMonth() > 8 ? "" : "0") + (date.getMonth() + 1));
+				if (iDate >= fromDate && iDate <= toDate) return false;
+			}
+		}
 
 		return true;
 	}
