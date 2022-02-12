@@ -112,7 +112,7 @@
         <option value="/geojson/us_county_min.json">US Counties</option>
         <option value="/geojson/urban_areas.geojson">Urban Areas</option>
       </select>
-      <div v-for="(value, name, index) of customLayers" class="line flex space-between">
+      <div v-for="(value, name) of customLayers" class="line flex space-between">
         <div class="flex-center">{{ name }}</div>
         <a @click="selectAllLayer(value)" class="smallbtn bg-success" style="width: 25%">Select All</a>
         <button @click="removeCustomLayer(name)" type="button" class="close" aria-label="Close">×</button>

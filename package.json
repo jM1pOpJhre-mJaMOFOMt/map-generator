@@ -5,7 +5,6 @@
   "scripts": {
     "serve": "vite build && vite preview",
     "build": "vite build",
-    "lint": "vue-cli-service lint --quiet",
     "dev": "vite"
   },
   "dependencies": {
@@ -18,12 +17,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^1.9.3",
-    "@vue/cli-plugin-eslint": "~4.5.0",
-    "eslint": "^6.7.2",
-    "eslint-plugin-import": "^2.20.2",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-vue": "^7.0.0",
+    "eslint": "^8.9.0",
+    "eslint-plugin-vue": "^8.4.1",
     "vite": "^2.6.4"
   },
   "license": "ISC",
