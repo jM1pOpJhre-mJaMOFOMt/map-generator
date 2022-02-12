@@ -204,7 +204,7 @@ let map;
 const allFound = [];
 const allFoundPanoIds = new Set();
 const customLayers = {};
-let successfulRequests = 0;
+//let successfulRequests = 0;
 // TODO ^display successfulRequests
 const customPolygonsLayer = new L.FeatureGroup();
 const markerLayer = L.markerClusterGroup({
@@ -490,7 +490,7 @@ const generate = async (country) => {
 async function getLoc(loc, country) {
   return SV.getPanoramaByLocation(new google.maps.LatLng(loc.lat, loc.lng), settings.radius, (res, status) => {
     if (status != google.maps.StreetViewStatus.OK) return false;
-    successfulRequests++;
+    //successfulRequests++;
     if (settings.checkAllDates && res.time) {
       if (!res.time.length) return false;
       const fromDate = Date.parse(settings.fromDate);
@@ -567,7 +567,7 @@ function getPanoDeep(id, country, depth) {
       country.checkedPanos.delete(id);
       return getPanoDeep(id, country, depth);
     } else if (status != google.maps.StreetViewStatus.OK) return;
-    successfulRequests++
+    //successfulRequests++
     if (!pano) console.log(status, pano);
 
     const inCountry = booleanPointInPolygon([pano.location.latLng.lng(), pano.location.latLng.lat()], country.feature);
