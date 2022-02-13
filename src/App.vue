@@ -13,6 +13,7 @@
     <div v-if="selected.length" class="selected">
       <h4 class="center mb-2">Countries/Territories ({{ selected.length }})</h4>
       <Checkbox v-model:checked="settings.markersOnImport" label="Add markers to imported locations" title="This may affect performance." />
+      <Checkbox v-model:checked="settings.cluster" v-on:change="updateClusters" label="Cluster markers" title="For lag reduction." />
       <div v-for="country of selected" class="line flex space-between">
         <div class="flex-center">
           <span v-if="country.feature.properties.code" :class="`flag-icon flag-` + country.feature.properties.code.toLowerCase()"></span>
@@ -94,7 +95,8 @@
     <Checkbox v-model:checked="settings.checkLinks" label="Check linked panos" />
     <hr />
 
-    <Checkbox v-model:checked="settings.cluster" v-on:change="updateClusters" label="Cluster markers" title="For lag reduction." />
+
+    <Checkbox v-model:checked="settings.oneCountryAtATime" label="Only check one country/polygon at a time." />
 
     <div v-if="settings.checkLinks">
       <input type="range" v-model.number="settings.linksDepth" min="1" max="10" />
@@ -189,6 +191,7 @@ const settings = reactive({
   markersOnImport: false,
   cluster: true,
   onlyOneInTimeframe: false,
+  oneCountryAtATime: false
 });
 
 const select = ref("Select a country or draw a polygon");
@@ -426,7 +429,8 @@ const handleClickStart = () => {
 };
 
 const start = async () => {
-  for (const polygon of selected.value) await generate(polygon);
+  if (settings.oneCountryAtATime) for (const polygon of selected.value) await generate(polygon);
+  else await Promise.allSettled(selected.value.map((polygon) => generate(polygon)));
   state.started = false;
 };
 
