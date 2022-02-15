@@ -160,6 +160,9 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 import 'leaflet.markercluster.freezable/dist/leaflet.markercluster.freezable.js';
 
+import "leaflet-contextmenu/dist/leaflet.contextmenu.js";
+import "leaflet-contextmenu/dist/leaflet.contextmenu.css";
+
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 
 import borders from '@/utils/borders.json';
@@ -217,6 +220,7 @@ const markerLayer = L.markerClusterGroup({
 const geojson = L.geoJson(borders, {
   style: style,
   onEachFeature: onEachFeature,
+  contextmenu: true
 });
 const roadmapLayer = L.tileLayer("https://{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}", { subdomains: ["mt0", "mt1", "mt2", "mt3"] });
 const googleSatelliteLayer = L.tileLayer("http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}", { subdomains: ["mt0", "mt1", "mt2", "mt3"] });
@@ -235,11 +239,13 @@ const baseMaps = {
   "Carto Light": cartoLightLayer,
   "Carto Dark": cartoDarkLayer,
 };
+
 const overlayMaps = {
   "Google Street View": gsvLayer,
   "Google Street View Official Only": gsvLayer2,
   "Google Street View Roads (Only Works at Zoom Level 12+)": gsvLayer3,
 };
+
 const drawControl = new L.Control.Draw({
   position: "bottomleft",
   draw: {
@@ -260,9 +266,22 @@ const drawControl = new L.Control.Draw({
   edit: { featureGroup: customPolygonsLayer },
 });
 
+const copyCoords = (e) => {
+  navigator.clipboard.writeText(e.latlng.lat.toFixed(7) + ", " + e.latlng.lng.toFixed(7));
+};
+
+const openNearestPano = (e) => {
+  open("https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + e.latlng.lat + "," + e.latlng.lng);
+};
+
 onMounted(() => {
   map = L.map("map", {
     attributionControl: false,
+    contextmenu: true,
+    contextmenuItems: [
+      {text: "Copy Coordinates", callback: copyCoords},
+      {text: "See Nearest Pano", callback: openNearestPano}
+    ],
     center: [0, 0],
     preferCanvas: true,
     zoom: 2,
@@ -349,6 +368,7 @@ function addCustomLayer(geoJSON, name) {
     const newLayer = L.geoJson(geoJSON, {
       style: style,
       onEachFeature: onEachFeature,
+      contextmenu: true
     });
     for (const layer in newLayer._layers) {
       const polygon = newLayer._layers[layer];
@@ -659,7 +679,7 @@ function addLocation(location, country, marker) {
     layer.on({
       mouseover: highlightFeature,
       mouseout: resetHighlight,
-      click: selectCountry,
+      click: selectCountry
     });
   }
 
