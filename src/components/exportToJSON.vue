@@ -12,8 +12,7 @@ const props = defineProps({
 const exportToJson = () => {
   let data = [];
   props.selection.forEach((country) => (data = data.concat(country.found)));
-  const dataUri = 'data:application/json;charset=utf-8,';
-  encodeURIComponent(JSON.stringify({ customCoordinates: data }));
+  const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({ customCoordinates: data }));
   const fileName = `Generated map (${data.length} location${data.length > 1 ? 's' : ''}).json`;
   const linkElement = document.createElement('a');
   linkElement.href = dataUri;

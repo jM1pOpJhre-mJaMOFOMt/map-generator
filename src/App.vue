@@ -13,7 +13,7 @@
     <div v-if="selected.length" class="selected">
       <h4 class="center mb-2">Countries/Territories ({{ selected.length }})</h4>
       <Checkbox v-model:checked="settings.markersOnImport" label="Add markers to imported locations" title="This may affect performance." />
-      <Checkbox v-model:checked="settings.cluster" v-on:change="updateClusters" label="Cluster markers" title="For lag reduction." />
+      <Checkbox v-model:checked="settings.checkImports" label="Check imported locations" title="Useful for comprehensive datasets." />
       <div v-for="country of selected" class="line flex space-between">
         <div class="flex-center">
           <span v-if="country.feature.properties.code" :class="`flag-icon flag-` + country.feature.properties.code.toLowerCase()"></span>
@@ -95,8 +95,10 @@
     <Checkbox v-model:checked="settings.checkLinks" label="Check linked panos" />
     <hr />
 
-
     <Checkbox v-model:checked="settings.oneCountryAtATime" label="Only check one country/polygon at a time." />
+    <hr />
+
+    <Checkbox v-model:checked="settings.cluster" v-on:change="updateClusters" label="Cluster markers" title="For lag reduction." />
 
     <div v-if="settings.checkLinks">
       <input type="range" v-model.number="settings.linksDepth" min="1" max="10" />
@@ -191,7 +193,8 @@ const settings = reactive({
   checkAllDates: true,
   checkLinks: false,
   linksDepth: 2,
-  markersOnImport: false,
+  markersOnImport: true,
+  checkImports: false,
   cluster: true,
   onlyOneInTimeframe: false,
   oneCountryAtATime: false
@@ -211,7 +214,7 @@ const allFound = [];
 const allFoundPanoIds = new Set();
 const customLayers = {};
 //let successfulRequests = 0;
-// TODO ^display successfulRequests
+//TODO display successfulRequests
 const customPolygonsLayer = new L.FeatureGroup();
 const markerLayer = L.markerClusterGroup({
   maxClusterRadius: 100,
@@ -273,6 +276,9 @@ const copyCoords = (e) => {
 const openNearestPano = (e) => {
   open("https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + e.latlng.lat + "," + e.latlng.lng);
 };
+
+//addEventListener('paste', console.log);
+//TODO add paste handler
 
 onMounted(() => {
   map = L.map("map", {
@@ -386,17 +392,19 @@ async function locationsFileProcess(e, country) {
   for (const file of e.target.files) {
     const result = await readFileAsText(file);
     if (file.type == "application/json") {
+      let JSONResult;
       try {
-        const JSONResult = JSON.parse(result);
+        JSONResult = JSON.parse(result);
         if (!JSONResult.customCoordinates) {
           throw Error;
         }
-        for (const location of JSONResult.customCoordinates) {
-          if (!location.panoId || !location.lat || !location.lng) continue;
-          addLocation(location, country, settings.markersOnImport);
-        }
       } catch (e) {
         alert("Invalid JSON.");
+      }
+      for (const location of JSONResult.customCoordinates) {
+        if (!location.panoId || !location.lat || !location.lng) continue;
+        if (settings.checkImports) getPano(location.panoId, country);
+        else addLocation(location, country, settings.markersOnImport);
       }
     } else {
       alert("Unknown file type: " + file.type + ". Only JSON may be imported.");
