@@ -202,17 +202,13 @@ const settings = reactive({
 
 const select = ref("Select a country or draw a polygon");
 const selected = ref([]);
-const canBeStarted = computed(() =>
-selected.value.some((country) => country.found.length < country.nbNeeded)
-);
-const hasResults = computed(() =>
-selected.value.some((country) => country.found.length > 0)
-);
+const canBeStarted = computed(() => selected.value.some((country) => country.found.length < country.nbNeeded));
+const hasResults = computed(() => selected.value.some((country) => country.found.length > 0));
 
 let map;
 const allFound = [];
 const allFoundPanoIds = new Set();
-const customLayers = {};
+let customLayers = {};
 //let successfulRequests = 0;
 //TODO display successfulRequests
 const customPolygonsLayer = new L.FeatureGroup();
@@ -323,20 +319,16 @@ onMounted(() => {
     e.layers.eachLayer((layer) => {
       const polygon = layer;
       polygon.feature = layer.toGeoJSON();
-      const index = selected.value.findIndex(
-        (x) => getName(x) === getName(layer)
-      );
+      const index = selected.value.findIndex((x) => getName(x) === getName(layer));
       if (index != -1) selected.value[index] = polygon;
     })
   });
 
   map.on("draw:deleted", (e) => {
     e.layers.eachLayer((layer) => {
-      const index = selected.value.findIndex(
-        (x) => getName(x) === getName(layer)
-      );
+      const index = selected.value.findIndex((x) => getName(x) === getName(layer));
       if (index != -1) selected.value.splice(index, 1);
-    })
+    });
   });
 
   // Fix hard reload issue
@@ -725,11 +717,9 @@ function addLocation(location, country, marker) {
   function selectCountry(e) {
     if (state.started) return;
     const country = e.target;
-    const index = selected.value.findIndex(
-      (x) => getName(x) === getName(country)
-    );
+    initLayer(country);
+    const index = selected.value.findIndex((x) => getName(x) === getName(country));
     if (index == -1) {
-      initLayer(country);
       country.setStyle(highlighted());
       selected.value.push(country);
     } else {
@@ -742,7 +732,7 @@ function addLocation(location, country, marker) {
     selected.value = geojson.getLayers().map((country) => {
       initLayer(country);
       return country;
-    })
+    });
     geojson.setStyle(highlighted);
   }
 
@@ -758,10 +748,8 @@ function addLocation(location, country, marker) {
     selected.value.length = 0;
     geojson.setStyle(style());
     customPolygonsLayer.setStyle(customPolygonStyle());
-    Object.values(customLayers).forEach((customLayer) =>
-    Object.values(customLayer._layers).forEach((polygon) => polygon.setStyle(customPolygonStyle()))
-  );
-}
+    Object.values(customLayers).forEach((customLayer) => Object.values(customLayer._layers).forEach((polygon) => polygon.setStyle(customPolygonStyle())));
+  }
 
 function highlightFeature(e) {
   if (state.started) return;
