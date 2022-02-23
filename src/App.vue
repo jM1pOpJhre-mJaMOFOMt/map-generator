@@ -319,14 +319,15 @@ onMounted(() => {
     e.layers.eachLayer((layer) => {
       const polygon = layer;
       polygon.feature = layer.toGeoJSON();
-      const index = selected.value.findIndex((x) => getName(x) === getName(layer));
+
+      const index = selected.value.findIndex((x) => L.Util.stamp(x) === L.Util.stamp(layer));
       if (index != -1) selected.value[index] = polygon;
     })
   });
 
   map.on("draw:deleted", (e) => {
     e.layers.eachLayer((layer) => {
-      const index = selected.value.findIndex((x) => getName(x) === getName(layer));
+      const index = selected.value.findIndex((x) => L.Util.stamp(x) === L.Util.stamp(layer));
       if (index != -1) selected.value.splice(index, 1);
     });
   });
@@ -718,7 +719,7 @@ function addLocation(location, country, marker) {
     if (state.started) return;
     const country = e.target;
     initLayer(country);
-    const index = selected.value.findIndex((x) => getName(x) === getName(country));
+    const index = selected.value.findIndex((x) => L.Util.stamp(x) === L.Util.stamp(country));
     if (index == -1) {
       country.setStyle(highlighted());
       selected.value.push(country);
@@ -754,16 +755,12 @@ function addLocation(location, country, marker) {
 function highlightFeature(e) {
   if (state.started) return;
   const layer = e.target;
-  const index = selected.value.findIndex((x) => getName(x) === getName(layer));
-  if (index == -1)  layer.setStyle(highlighted());
+  if (!selected.value.some((x) => L.Util.stamp(x) === L.Util.stamp(layer))) layer.setStyle(highlighted());
   select.value = `${getName(layer)} ${layer.found ? "(" + layer.found.length + ")" : "(0)"}`;
 }
 function resetHighlight(e) {
   const layer = e.target;
-  const index = selected.value.findIndex((x) => getName(x) === getName(layer));
-  if (index == -1) {
-    layer.setStyle(removeHighlight());
-  }
+  if (!selected.value.some((x) => L.Util.stamp(x) === L.Util.stamp(layer))) layer.setStyle(removeHighlight());
   select.value = "Select a country or draw a polygon";
 }
 function style() {
