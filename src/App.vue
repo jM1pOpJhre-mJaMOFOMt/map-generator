@@ -396,8 +396,12 @@ async function locationsFileProcess(e, country) {
       }
       for (const location of JSONResult.customCoordinates) {
         if (!location.panoId || !location.lat || !location.lng) continue;
-        if (settings.checkImports) getPano(location.panoId, country);
-        else addLocation(location, country, settings.markersOnImport);
+        if (settings.checkImports) {
+          for (let link of location.linked) {
+            if (!JSONResult.customCoordinates.some(loc => loc.panoId === link)) getPano(link, country);
+          }
+        }
+        addLocation(location, country, settings.markersOnImport);
       }
     } else {
       alert("Unknown file type: " + file.type + ". Only JSON may be imported.");
@@ -639,7 +643,11 @@ function addLoc(pano, country) {
     heading: settings.adjustHeading && pano.links.length > 0 ? parseInt(pano.links[0].heading) + randomInRange(-settings.headingDeviation, settings.headingDeviation) : 0,
     pitch: settings.adjustPitch ? settings.pitchDeviation : 0,
     imageDate: pano.imageDate,
+    linked: [...new Set([...pano.links.map((link) => link.pano), ...pano.time.map((loc) => loc.pano)])].sort()
   };
+
+  const index = location.linked.indexOf(pano.location.pano);
+  if (index != -1) location.linked.splice(index, 1);
 
   return addLocation(location, country, true);
 }
