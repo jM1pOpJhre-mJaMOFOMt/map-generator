@@ -93,6 +93,10 @@
     <hr />
 
     <Checkbox v-model:checked="settings.checkLinks" label="Check linked panos" />
+    <div v-if="settings.checkLinks">
+      <input type="range" v-model.number="settings.linksDepth" min="1" max="10" />
+      Depth: {{ settings.linksDepth }}
+    </div>
     <hr />
 
     <Checkbox v-model:checked="settings.oneCountryAtATime" label="Only check one country/polygon at a time." />
@@ -100,10 +104,6 @@
 
     <Checkbox v-model:checked="settings.cluster" v-on:change="updateClusters" label="Cluster markers" title="For lag reduction." />
 
-    <div v-if="settings.checkLinks">
-      <input type="range" v-model.number="settings.linksDepth" min="1" max="10" />
-      Depth: {{ settings.linksDepth }}
-    </div>
     <hr />
 
     <div class="customLayers">
@@ -572,10 +572,6 @@ function isPanoGood(pano) {
   }
 
   return true;
-}
-
-top.gp = function (id) {
-  return getPano(id, null);
 }
 
 top.goto = function (lat, lng) {
