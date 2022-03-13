@@ -14,6 +14,9 @@
       <h4 class="center mb-2">Countries/Territories ({{ selected.length }})</h4>
       <Checkbox v-model:checked="settings.markersOnImport" label="Add markers to imported locations" title="This may affect performance." />
       <Checkbox v-model:checked="settings.checkImports" label="Check imported locations" title="Useful for comprehensive datasets." />
+      <br/>
+      <Button @click="changeLocationsCaps" class="smallbtn bg-success" title="Change locations cap for all selected" text="Change locations cap for all selected" />
+      <hr/>
       <div v-for="country of selected" class="line flex space-between">
         <div class="flex-center">
           <span v-if="country.feature.properties.code" :class="`flag-icon flag-` + country.feature.properties.code.toLowerCase()"></span>
@@ -378,6 +381,13 @@ function addCustomLayer(geoJSON, name) {
     customLayers[name] = newLayer;
   } catch (e) {
     alert("Invalid GeoJSON.");
+  }
+}
+
+async function changeLocationsCaps() {
+  const newCap = Math.abs(parseInt(prompt("What would you like to set the locations cap to?")));
+  if (!isNaN(newCap)) {
+    for (const polygon of selected.value) polygon.nbNeeded = newCap;
   }
 }
 
