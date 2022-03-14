@@ -294,6 +294,7 @@ onMounted(() => {
     worldCopyJump: true,
   });
   roadmapLayer.addTo(map);
+  gsvLayer2.addTo(map);
   geojson.addTo(map);
   customPolygonsLayer.addTo(map);
   markerLayer.addTo(map);
@@ -496,7 +497,7 @@ top.allCSV = function () {
 };
 
 top.allJSON = () => {
-  const dataUri = "data:application/json;charset=utf-8," +encodeURIComponent(JSON.stringify({ customCoordinates: allFound }));
+  const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ customCoordinates: allFound }));
   const fileName = `Generated map (${allFound.length} location${allFound.length > 1 ? "s" : ""}).json`;
   const linkElement = document.createElement("a");
   linkElement.href = dataUri;
@@ -649,7 +650,7 @@ function addLoc(pano, country) {
     heading: settings.adjustHeading && pano.links.length > 0 ? parseInt(pano.links[0].heading) + randomInRange(-settings.headingDeviation, settings.headingDeviation) : 0,
     pitch: settings.adjustPitch ? settings.pitchDeviation : 0,
     imageDate: pano.imageDate,
-    linked: [...new Set([...pano.links.map((link) => link.pano), ...pano.time.map((loc) => loc.pano)])].sort()
+    links: [...new Set(pano.links.map(loc => loc.pano).concat(pano.time.map(loc => loc.pano)))].filter(id => id != pano.location.pano).sort()
   };
 
   const index = location.linked.indexOf(pano.location.pano);
