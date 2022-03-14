@@ -408,7 +408,7 @@ async function locationsFileProcess(e, country) {
       for (const location of JSONResult.customCoordinates) {
         if (!location.panoId || !location.lat || !location.lng) continue;
         if (settings.checkImports) {
-          for (let link of location.linked) {
+          for (let link of location.links) {
             if (!JSONResult.customCoordinates.some(loc => loc.panoId === link)) getPano(link, country);
           }
         }
