@@ -650,11 +650,11 @@ function addLoc(pano, country) {
     heading: settings.adjustHeading && pano.links.length > 0 ? parseInt(pano.links[0].heading) + randomInRange(-settings.headingDeviation, settings.headingDeviation) : 0,
     pitch: settings.adjustPitch ? settings.pitchDeviation : 0,
     imageDate: pano.imageDate,
-    links: [...new Set(pano.links.map(loc => loc.pano).concat(pano.time.map(loc => loc.pano)))].filter(id => id != pano.location.pano).sort()
+    links: [...new Set(pano.links.map(loc => loc.pano).concat(pano.time.map(loc => loc.pano)))].sort()
   };
 
-  const index = location.linked.indexOf(pano.location.pano);
-  if (index != -1) location.linked.splice(index, 1);
+  const index = location.links.indexOf(pano.location.pano);
+  if (index != -1) location.links.splice(index, 1);
 
   return addLocation(location, country, true);
 }
